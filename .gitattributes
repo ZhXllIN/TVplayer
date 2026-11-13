@@ -1,0 +1,4 @@
+tools/** -text
+tools/mpv/PortableVideo.cs text
+tools/LibreOffice/program/mergedlo.dll filter=lfs diff=lfs merge=lfs -text
+tools/mpv/libmpv-2.dll filter=lfs diff=lfs merge=lfs -text

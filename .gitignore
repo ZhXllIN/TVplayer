@@ -1,6 +1,5 @@
 /PlayerData/
 /*.zip
-/tools/*
-!/tools/mpv/
-/tools/mpv/*
-!/tools/mpv/PortableVideo.cs
+__pycache__/
+*.pyc
+*.msi
