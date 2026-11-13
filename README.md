@@ -27,3 +27,13 @@ TVplayer 在一台 64 位 Windows 10/11 电脑上管理两台电视。A、B 通�
 ## 源码与迁移
 
 源码包含启动器、控制台、播放器脚本及视频桥接代码。要从源码运行，请将 Release 中的完整 `tools` 目录复制到 `Start.cmd` 同级目录。已保存的配置、导入的媒体及转换页面位于 `PlayerData`。迁移已配置的播放台时复制整个目录，在新电脑重新选择显示器并保存自启设置。
+
+## 离线包中的第三方组件
+
+| 组件 | 包内位置 | 用途与来源 |
+| --- | --- | --- |
+| LibreOffice 26.2.7（Impress） | `tools/LibreOffice/` | 将 PPT、PPTX 转为 PDF。采用 The Document Foundation 的 Windows x64 构建，随包声明见该目录中的 `LICENSE.html`、`license.txt` 和 `NOTICE`。[LibreOffice 项目](https://www.libreoffice.org/) |
+| Poppler 26.07.0 | `tools/poppler/` | 使用 `bin/pdftoppm.exe` 和随附 DLL 将 PDF 渲染为 PNG，包含配置和字体资源目录。[Poppler 项目](https://poppler.freedesktop.org/) |
+| mpv（libmpv） | `tools/mpv/libmpv-2.dll` | 通过 `PortableVideo.cs` 解码并播放视频。此 DLL 取自 Tsukimi 26.6.1 的 Windows 分发包；26.6.1 是 Tsukimi 的版本。[mpv 项目](https://mpv.io/) · [Tsukimi 项目](https://github.com/tsukinaha/tsukimi) |
+
+Git 的 `tools/` 目录仅跟踪本项目的 `mpv/PortableVideo.cs` 桥接源码。上表中的运行文件随 Release 离线 ZIP 提供。GitHub 自动生成的 **Source code (zip)** 仅含源码；部署时请下载 **TVplayer-v1.0.0-win-x64-offline.zip**。界面使用 Windows PowerShell、WPF 和 Windows Forms，图片由 WPF 显示。

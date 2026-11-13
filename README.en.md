@@ -27,3 +27,13 @@ For example, enter `08:00-22:00` for playback and `12:00-13:00` for a lunch brea
 ## Running from source and moving to another PC
 
 The repository contains the launcher, console, player scripts and native video bridge source. To run this checkout, copy the complete `tools` directory from the release alongside `Start.cmd`. The player stores settings, imported media and rendered pages in `PlayerData`. To move a configured player, copy its entire directory, select the displays on the destination PC and save the sign-in settings again.
+
+## Third-party components in the offline package
+
+| Component | Location in the ZIP | Purpose and upstream |
+| --- | --- | --- |
+| LibreOffice 26.2.7 (Impress) | `tools/LibreOffice/` | Converts PPT and PPTX to PDF using The Document Foundation’s Windows x64 build. See the bundled `LICENSE.html`, `license.txt` and `NOTICE` in this directory. [LibreOffice](https://www.libreoffice.org/) |
+| Poppler 26.07.0 | `tools/poppler/` | Renders PDF pages to PNG with `bin/pdftoppm.exe`, its accompanying DLLs and resource directories. [Poppler](https://poppler.freedesktop.org/) |
+| mpv (libmpv) | `tools/mpv/libmpv-2.dll` | Decodes and plays video through `PortableVideo.cs`. This DLL comes from the Tsukimi 26.6.1 Windows distribution. The version number identifies Tsukimi. [mpv](https://mpv.io/) · [Tsukimi](https://github.com/tsukinaha/tsukimi) |
+
+The Git tree tracks only the project's `mpv/PortableVideo.cs` bridge under `tools/`. The release ZIP supplies the runtime files listed above. GitHub’s **Source code (zip)** contains the tracked sources. For deployment, download **TVplayer-v1.0.0-win-x64-offline.zip**. The UI uses Windows PowerShell, WPF and Windows Forms. WPF displays still images.
