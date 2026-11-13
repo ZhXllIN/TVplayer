@@ -10,6 +10,31 @@ TVplayer 在一台 64 位 Windows 10/11 电脑上管理两台电视。A、B 通�
 2. 接好电视，按 **Win + P → 扩展**。双击 **Start.cmd**，分别打开 A、B 通道。
 3. 在各通道添加素材、选择目标显示器，点击 **保存设置并开始 / 等待定时播放**。
 
+## 用 Git 克隆和更新
+
+先安装 Git 和 Git LFS，在 PowerShell 中运行以下命令。两个较大的 DLL 通过 Git LFS 下载。公开仓库支持匿名克隆。
+
+**首次克隆并启动**
+
+~~~powershell
+git lfs install
+git clone https://github.com/ZhXllIN/TVplayer.git
+cd TVplayer
+git lfs pull
+.\Start.cmd
+~~~
+
+**更新已有副本**
+
+关闭播放器，在已有的 `TVplayer` 文件夹内打开 PowerShell，再运行以下命令。本地播放配置与素材保存在 Git 忽略的 `PlayerData` 目录。
+
+~~~powershell
+git lfs install
+git pull --ff-only
+git lfs pull
+.\Start.cmd
+~~~
+
 ## 素材与播放
 
 | 类型 | 支持的文件 | 播放方式 |
@@ -35,5 +60,3 @@ TVplayer 在一台 64 位 Windows 10/11 电脑上管理两台电视。A、B 通�
 | LibreOffice 26.2.7（Impress） | `tools/LibreOffice/` | 将 PPT、PPTX 转为 PDF。采用 The Document Foundation 的 Windows x64 构建，随包声明见该目录中的 `LICENSE.html`、`license.txt` 和 `NOTICE`。[LibreOffice 项目](https://www.libreoffice.org/) |
 | Poppler 26.07.0 | `tools/poppler/` | 使用 `bin/pdftoppm.exe` 和随附 DLL 将 PDF 渲染为 PNG，包含配置和字体资源目录。[Poppler 项目](https://poppler.freedesktop.org/) |
 | mpv（libmpv） | `tools/mpv/libmpv-2.dll` | 通过 `PortableVideo.cs` 解码并播放视频。此 DLL 取自 Tsukimi 26.6.1 的 Windows 分发包；26.6.1 是 Tsukimi 的版本。[mpv 项目](https://mpv.io/) · [Tsukimi 项目](https://github.com/tsukinaha/tsukimi) |
-
-克隆前请安装 Git LFS 并运行 `git lfs install`，然后执行 `git clone https://github.com/ZhXllIN/TVplayer.git`。已克隆的目录执行 `git pull` 和 `git lfs pull`。双击 `Start.cmd` 启动。免装 Git 的部署方式是下载 Release 中的离线 ZIP。

@@ -10,6 +10,31 @@ Run two TVs from one 64-bit Windows 10/11 PC. Channels A and B have independent 
 2. Connect the TVs and choose **Win + P → Extend**. Double-click **Start.cmd**, then open channel A or B.
 3. Choose **添加素材** to add files and **目标显示器** to select the display. Click **保存设置并开始 / 等待定时播放** to save and start or wait for the scheduled time.
 
+## Clone and update with Git
+
+Install Git and Git LFS, then run the commands below in PowerShell. Git LFS downloads the two large DLLs. This public repository supports anonymous cloning.
+
+**First clone and launch**
+
+~~~powershell
+git lfs install
+git clone https://github.com/ZhXllIN/TVplayer.git
+cd TVplayer
+git lfs pull
+.\Start.cmd
+~~~
+
+**Update an existing checkout**
+
+Close the player and open PowerShell inside the existing `TVplayer` folder. Local settings and media are stored in the Git-ignored `PlayerData` directory.
+
+~~~powershell
+git lfs install
+git pull --ff-only
+git lfs pull
+.\Start.cmd
+~~~
+
 ## Media and playback
 
 | Media | File types | Playback |
@@ -35,5 +60,3 @@ The repository contains the launcher, console, player scripts and native video b
 | LibreOffice 26.2.7 (Impress) | `tools/LibreOffice/` | Converts PPT and PPTX to PDF using The Document Foundation’s Windows x64 build. See the bundled `LICENSE.html`, `license.txt` and `NOTICE` in this directory. [LibreOffice](https://www.libreoffice.org/) |
 | Poppler 26.07.0 | `tools/poppler/` | Renders PDF pages to PNG with `bin/pdftoppm.exe`, its accompanying DLLs and resource directories. [Poppler](https://poppler.freedesktop.org/) |
 | mpv (libmpv) | `tools/mpv/libmpv-2.dll` | Decodes and plays video through `PortableVideo.cs`. This DLL comes from the Tsukimi 26.6.1 Windows distribution. The version number identifies Tsukimi. [mpv](https://mpv.io/) · [Tsukimi](https://github.com/tsukinaha/tsukimi) |
-
-Install Git LFS and run `git lfs install` before cloning with `git clone https://github.com/ZhXllIN/TVplayer.git`. For an existing checkout, run `git pull` and `git lfs pull`. Double-click `Start.cmd` to launch. The offline release ZIP also works without Git.
