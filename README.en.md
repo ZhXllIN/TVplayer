@@ -43,6 +43,12 @@ git lfs pull
 | Images | PNG, JPG, JPEG, BMP | Adjustable duration, 20 seconds by default |
 | Presentations and documents | PPT, PPTX, PDF | Converted into static pages on import. Slides use the image duration. Animations and embedded videos are omitted. |
 
+### Document import and playlist controls in v1.1.0
+
+- **Import files.** PDF, PPT and PPTX files are converted in the background, one document at a time. Pages are cached as high-quality JPEGs with a 1920-pixel long edge. Each document occupies one playlist row, with a page count for multipage files. Pages from the same document in older playlists are grouped automatically.
+- **Start on a specific page.** Select a document, enter its starting page under **起播页**, then save and start playback. Enter 3 to play from page 3 onward. Enable **单项播放** to hold page 3 on screen.
+- **Remove several files.** In the playlist, Ctrl-click individual rows, Shift-click a range, or press Ctrl+A to select all. Click **移除选中文件** to remove the selection. Removing a document removes all its pages from the playlist and preserves the original file.
+
 The playlist loops by default. Select **单项播放** to hold one page or repeat one clip. Both channels use the system default audio output. Per-channel audio routing is currently unavailable.
 
 ## Scheduling and sign-in
@@ -58,5 +64,5 @@ The repository contains the launcher, console, player scripts and native video b
 | Component | Location in the ZIP | Purpose and upstream |
 | --- | --- | --- |
 | LibreOffice 26.2.7 (Impress) | `tools/LibreOffice/` | Converts PPT and PPTX to PDF using The Document Foundation’s Windows x64 build. See the bundled `LICENSE.html`, `license.txt` and `NOTICE` in this directory. [LibreOffice](https://www.libreoffice.org/) |
-| Poppler 26.07.0 | `tools/poppler/` | Renders PDF pages to PNG with `bin/pdftoppm.exe`, its accompanying DLLs and resource directories. [Poppler](https://poppler.freedesktop.org/) |
+| Poppler 26.07.0 | `tools/poppler/` | Renders PDF pages to JPEG with `bin/pdftoppm.exe`, its accompanying DLLs and resource directories. [Poppler](https://poppler.freedesktop.org/) |
 | mpv (libmpv) | `tools/mpv/libmpv-2.dll` | Decodes and plays video through `PortableVideo.cs`. This DLL comes from the Tsukimi 26.6.1 Windows distribution. The version number identifies Tsukimi. [mpv](https://mpv.io/) · [Tsukimi](https://github.com/tsukinaha/tsukimi) |

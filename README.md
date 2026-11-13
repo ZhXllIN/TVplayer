@@ -43,6 +43,12 @@ git lfs pull
 | 图片 | PNG、JPG、JPEG、BMP | 默认停留 20 秒，可调整 |
 | 演示文稿与文档 | PPT、PPTX、PDF | 导入时转成静态页面，按图片时长播放；PPT 动画和嵌入视频不保留 |
 
+### v1.1.0 文档导入与列表操作
+
+- **导入**：选择 PDF、PPT 或 PPTX 后，播放器在后台逐份转换，页面缓存为长边 1920 像素的高质量 JPEG。每份文档在列表中占一行，多页文档显示页数；旧列表中属于同一份文档的页面会自动归组。
+- **从指定页播放**：选中文档，填写“起播页”，点击“保存设置并开始 / 等待定时播放”。例如，输入 3 会从第 3 页开始顺序播放；同时勾选“单项播放”则固定显示第 3 页。
+- **批量移除**：在列表中用 Ctrl + 单击多选、Shift + 单击连选、Ctrl + A 全选，再点击“移除选中文件”。移除文档会一并移除其所有播放页，原始文件保留。
+
 默认循环整个列表。勾选“单项播放”可固定一页或循环当前视频。两路声音使用系统默认输出，界面暂未提供独立音频设备选择。
 
 ## 定时与恢复
@@ -58,5 +64,5 @@ git lfs pull
 | 组件 | 包内位置 | 用途与来源 |
 | --- | --- | --- |
 | LibreOffice 26.2.7（Impress） | `tools/LibreOffice/` | 将 PPT、PPTX 转为 PDF。采用 The Document Foundation 的 Windows x64 构建，随包声明见该目录中的 `LICENSE.html`、`license.txt` 和 `NOTICE`。[LibreOffice 项目](https://www.libreoffice.org/) |
-| Poppler 26.07.0 | `tools/poppler/` | 使用 `bin/pdftoppm.exe` 和随附 DLL 将 PDF 渲染为 PNG，包含配置和字体资源目录。[Poppler 项目](https://poppler.freedesktop.org/) |
+| Poppler 26.07.0 | `tools/poppler/` | 使用 `bin/pdftoppm.exe` 和随附 DLL 将 PDF 渲染为 JPEG，包含配置和字体资源目录。[Poppler 项目](https://poppler.freedesktop.org/) |
 | mpv（libmpv） | `tools/mpv/libmpv-2.dll` | 通过 `PortableVideo.cs` 解码并播放视频。此 DLL 取自 Tsukimi 26.6.1 的 Windows 分发包；26.6.1 是 Tsukimi 的版本。[mpv 项目](https://mpv.io/) · [Tsukimi 项目](https://github.com/tsukinaha/tsukimi) |
