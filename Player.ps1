@@ -30,14 +30,32 @@ $heading=Add-Control Label "输出 $Channel   /   播放列表"
 $heading.FontSize=22
 $list=Add-Control ListBox
 $list.Height=150
+$list.SelectionMode='Extended'
+$list.DisplayMemberPath='Label'
+$list.Add_PreviewKeyDown({
+ if($_.Key -eq 'A' -and [Windows.Input.Keyboard]::Modifiers -eq 'Control'){$list.SelectAll();$_.Handled=$true}
+})
+function Add-Row($name,$count){
+ $label=if($count -gt 1){"$name （$count 页）"}else{$name}
+ [void]$list.Items.Add([pscustomobject]@{Name=$name;Count=[int]$count;Label=$label})
+}
+function Row-Start($row){
+ $offset=0
+ for($i=0;$i -lt $row;$i++){$offset+=$list.Items[$i].Count}
+ return $offset
+}
 $add=Add-Control Button '添加素材…'
-$remove=Add-Control Button '移除选中项'
+$remove=Add-Control Button '移除选中文件（Ctrl 多选 / Shift 连选）'
 $label=Add-Control Label '目标显示器'
 $screen=Add-Control ComboBox
 $monitors=[Windows.Forms.Screen]::AllScreens
 foreach($m in $monitors){[void]$screen.Items.Add($m.DeviceName)}
 $screen.SelectedIndex=if($Channel -eq 'B'){$monitors.Count-1}else{0}
 $single=Add-Control CheckBox '单项播放（固定当前页或循环当前视频）'
+$label=Add-Control Label '选中文档的起播页（单项播放时固定该页）'
+$pageNumber=Add-Control TextBox
+$pageNumber.Text='1'
+$list.Add_SelectionChanged({$pageNumber.Text='1'})
 $label=Add-Control Label '每页停留秒数'
 $duration=Add-Control TextBox
 $duration.Text='20'
@@ -119,28 +137,26 @@ $videoClock.Add_Tick({
 $timer.Add_Tick({Advance})
 $output.Add_KeyDown({if($_.Key -eq 'Escape'){Halt}})
 $output.Add_Closing({if(!$script:closing){$_.Cancel=$true;Halt}})
-$add.Add_Click({
- $dlg=New-Object Microsoft.Win32.OpenFileDialog
- $dlg.Multiselect=$true
- $dlg.Filter='支持的素材|*.png;*.jpg;*.jpeg;*.bmp;*.mp4;*.wmv;*.avi;*.mov;*.m4v;*.mkv;*.webm;*.ts;*.mpg;*.mpeg;*.pdf;*.ppt;*.pptx'
- if(!$dlg.ShowDialog()){return}
- Halt
- foreach($file in $dlg.FileNames){
-  try{
+$importStatus=Add-Control Label ''
+$importClock=New-Object Windows.Threading.DispatcherTimer
+$importClock.Interval=[timespan]::FromMilliseconds(250)
+$importWorker={
+ param($file,$cache,$root)
+ $ErrorActionPreference='Stop'
    $items=@($file)
    if($file -match '\.(pdf|pptx?)$'){
     $dir=Join-Path $cache ([guid]::NewGuid())
     [void](mkdir $dir)
     $pdf=$file
     if($file -match '\.pptx?$'){
-     $profile=([uri](Join-Path $dir 'profile')).AbsoluteUri
-     & (Join-Path $PSScriptRoot 'tools\LibreOffice\program\soffice.com') "-env:UserInstallation=$profile" --headless --convert-to 'pdf:impress_pdf_Export' --outdir $dir $file
+     $profile=([uri](Join-Path $cache 'impress-profile')).AbsoluteUri
+     & (Join-Path $root 'tools\LibreOffice\program\soffice.com') "-env:UserInstallation=$profile" --headless --convert-to 'pdf:impress_pdf_Export' --outdir $dir $file | Out-Null
      $pdf=Join-Path $dir ([IO.Path]::GetFileNameWithoutExtension($file)+'.pdf')
      if($LASTEXITCODE -or !(Test-Path -LiteralPath $pdf)){throw '演示文稿转换失败，请检查文件是否损坏或加密。'}
     }
-    & (Join-Path $PSScriptRoot 'tools\poppler\bin\pdftoppm.exe') -scale-to 1920 -png $pdf (Join-Path $dir page)
+    & (Join-Path $root 'tools\poppler\bin\pdftoppm.exe') -q -scale-to 1920 -jpeg -jpegopt quality=92 $pdf (Join-Path $dir page)
     if($LASTEXITCODE){throw 'PDF 转换失败'}
-    $items=@(Get-ChildItem $dir -Filter *.png | Sort-Object {[int]([regex]::Match($_.BaseName,'\d+$').Value)} | ForEach-Object FullName)
+    $items=@(Get-ChildItem $dir -Filter *.jpg | Sort-Object {[int]([regex]::Match($_.BaseName,'\d+$').Value)} | ForEach-Object FullName)
     if(!$items.Count){throw '文件没有可播放的页'}
    }
    if($file -notmatch '\.(pdf|pptx?)$'){
@@ -148,20 +164,56 @@ $add.Add_Click({
     Copy-Item -LiteralPath $file -Destination $target
     $items=@($target)
    }
-   $n=0
-   foreach($item in $items){
-    $n++
-    $name=[IO.Path]::GetFileName($file)
-    if($items.Count -gt 1){$name+=" · 第 $n 页"}
-    [void]$list.Items.Add($name)
-    $script:pages+=@($item)
-   }
-  }catch{[void][Windows.MessageBox]::Show("$file`n$($_.Exception.Message)")}
+ [pscustomobject]@{Items=$items}
+}
+function Start-NextImport {
+ if(!$script:queue.Count){
+  $importClock.Stop()
+  $add.IsEnabled=$true
+  $importStatus.Content='导入完成'
+  return
  }
+ $script:importFile=$script:queue.Dequeue()
+ $importStatus.Content='正在导入 '+[IO.Path]::GetFileName($script:importFile)
+ $script:importJob=Start-Job -ScriptBlock $importWorker -ArgumentList $script:importFile,$cache,$PSScriptRoot
+ $importClock.Start()
+}
+$importClock.Add_Tick({
+ if($script:importJob.State -in 'Running','NotStarted'){return}
+ $importClock.Stop()
+ try{
+  $result=Receive-Job $script:importJob -ErrorAction Stop
+  $items=@($result.Items)
+  if(!$result -or !$items.Count){throw '没有可播放的素材'}
+  Add-Row ([IO.Path]::GetFileName($script:importFile)) $items.Count
+  $script:pages+= $items
+ }catch{[void][Windows.MessageBox]::Show("$script:importFile`n$($_.Exception.Message)")}
+ finally{Remove-Job $script:importJob -Force;$script:importJob=$null}
+ Start-NextImport
+})
+$add.Add_Click({
+ $dlg=New-Object Microsoft.Win32.OpenFileDialog
+ $dlg.Multiselect=$true
+ $dlg.Filter='支持的素材|*.png;*.jpg;*.jpeg;*.bmp;*.mp4;*.wmv;*.avi;*.mov;*.m4v;*.mkv;*.webm;*.ts;*.mpg;*.mpeg;*.pdf;*.ppt;*.pptx'
+ if(!$dlg.ShowDialog()){return}
+ $script:queue=[Collections.Generic.Queue[string]]::new()
+ foreach($file in $dlg.FileNames){$script:queue.Enqueue($file)}
+ $add.IsEnabled=$false
+ Start-NextImport
 })
 $remove.Add_Click({
- $i=$list.SelectedIndex
- if($i -ge 0){Halt;$list.Items.RemoveAt($i);$script:pages=@(for($j=0;$j -lt $pages.Count;$j++){if($j -ne $i){$pages[$j]}})}
+ if(!$list.SelectedItems.Count){return}
+ Halt
+ $kept=[Collections.Generic.List[string]]::new()
+ $offset=0
+ foreach($row in $list.Items){
+  if(!$list.SelectedItems.Contains($row)){
+   for($j=0;$j -lt $row.Count;$j++){$kept.Add($pages[$offset+$j])}
+  }
+  $offset+=$row.Count
+ }
+ foreach($row in @($list.SelectedItems)){$list.Items.Remove($row)}
+ $script:pages=$kept.ToArray()
 })
 $playerPath=$PSCommandPath
 $config=Join-Path $cache 'settings.json'
@@ -190,7 +242,10 @@ function Arm {
  $seconds=[int]$duration.Text
  if($seconds -lt 1){throw '停留时间至少为 1 秒'}
  $timer.Interval=[timespan]::FromSeconds($seconds)
- $script:index=[math]::Max(0,$list.SelectedIndex)
+  $row=[math]::Max(0,$list.SelectedIndex)
+ $page=[int]$pageNumber.Text
+ if($page -lt 1 -or $page -gt $list.Items[$row].Count){throw '起播页超出选中文件的页数'}
+ $script:index=(Row-Start $row)+$page-1
  $script:armed=$true
 }
 $play.Add_Click({
@@ -205,8 +260,8 @@ $play.Add_Click({
     $target
    }
   })
-  $state=@{pages=$portable;names=@($list.Items);screen=$screen.SelectedItem;seconds=$duration.Text;hours=$hours.Text;rest=$rest.Text;single=[bool]$single.IsChecked;index=$script:index;auto=[bool]$auto.IsChecked}
-  $state | ConvertTo-Json -Depth 4 | Set-Content "$config.tmp" -Encoding UTF8
+  $state=@{pages=$portable;rows=@(foreach($r in $list.Items){@{name=$r.Name;count=$r.Count}});screen=$screen.SelectedItem;seconds=$duration.Text;hours=$hours.Text;rest=$rest.Text;single=[bool]$single.IsChecked;index=$script:index;auto=[bool]$auto.IsChecked}
+  $state | ConvertTo-Json -Depth 6 | Set-Content "$config.tmp" -Encoding UTF8
   if(Test-Path $config){[IO.File]::Replace("$config.tmp",$config,"$config.bak")}else{[IO.File]::Move("$config.tmp",$config)}
   $link=Join-Path ([Environment]::GetFolderPath('Startup')) "Touping-$Channel.lnk"
   if($auto.IsChecked){
@@ -229,9 +284,28 @@ $window.Add_ContentRendered({
   try{
    $state=Get-Content $config -Raw | ConvertFrom-Json
    $script:pages=@(foreach($path in $state.pages){if([IO.Path]::IsPathRooted($path)){$path}else{Join-Path $cache $path}})
-   foreach($name in $state.names){[void]$list.Items.Add($name)}
+   if($state.rows){
+    foreach($row in $state.rows){Add-Row $row.name $row.count}
+   }else{
+    # Older playlists stored each rendered page as a separate entry.
+    for($i=0;$i -lt $pages.Count;){
+     $name=[string]$state.names[$i]
+     $count=1
+     if($name -match '^(.*\.(?:pdf|pptx?)) · 第 \d+ 页$'){
+      $name=$Matches[1]
+      $dir=[IO.Path]::GetDirectoryName($pages[$i])
+      while($i+$count -lt $pages.Count -and [IO.Path]::GetDirectoryName($pages[$i+$count]) -eq $dir -and $state.names[$i+$count] -match ' · 第 \d+ 页$'){$count++}
+     }
+     Add-Row $name $count
+     $i+=$count
+    }
+   }
    if($screen.Items.Contains($state.screen)){$screen.SelectedItem=$state.screen}
-   $list.SelectedIndex=$state.index
+   $remaining=[int]$state.index
+   for($i=0;$i -lt $list.Items.Count;$i++){
+    if($remaining -lt $list.Items[$i].Count){$list.SelectedIndex=$i;$pageNumber.Text=[string]($remaining+1);break}
+    $remaining-=$list.Items[$i].Count
+   }
    $hours.Text=$state.hours
    $rest.Text=$state.rest
    $duration.Text=$state.seconds
@@ -244,6 +318,8 @@ $window.Add_ContentRendered({
 })
 [void]$window.ShowDialog()
 $clock.Stop()
+$importClock.Stop()
+if($script:importJob){Remove-Job $script:importJob -Force}
 
 
 
